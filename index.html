@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal - NR Softech</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+
+  <!-- HEADER (Same as Payslip) -->
+  <div class="header-section">
+    <div class="logo-section">
+      <img src="assets/logo.jpeg" alt="Company Logo">
+    </div>
+    <div class="company-details">
+      <h1>NR Softech Pvt Ltd.</h1>
+      <h3>Hyderabad,Telangana-500062</h3>
+      <h4 id="portalTitle">Admin Portal</h4>
+    </div>
+  </div>
+
+  <hr class="header-hr">
+
+  <!-- LOGIN SECTION -->
+  <div id="loginSection" class="section-container">
+    <h2>Admin Login</h2>
+    <form id="loginForm">
+      <div class="input-group">
+        <label>Admin ID</label>
+        <input type="text" id="adminId" required>
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="adminPassword" required>
+      </div>
+      <p id="loginError" style="color: red; font-size: 14px; display: none;"></p>
+      <button type="submit" class="btn btn-primary">Login</button>
+      <div style="margin-top: 15px; text-align: center;">
+        <a href="forgot-password.html" style="color: #4285f4; text-decoration: none; font-size: 14px;">Forgot
+          Password?</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- DASHBOARD SECTION -->
+  <div id="dashboardSection" class="section-container" style="display: none;">
+    <div class="dashboard-header">
+      <h2>Employee Database</h2>
+      <button id="logoutBtn" class="btn btn-danger">Sign out</button>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="action-bar">
+      <a href="payslip.html" class="btn btn-success">+ Add New Employee (Payslip)</a>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search by Name, ID, or Email...">
+        <button id="searchBtn" class="btn btn-primary">Search</button>
+      </div>
+    </div>
+
+    <!-- DATABASE TABLE -->
+    <div class="table-container">
+      <table id="employeeTable">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Pers. No (ID)</th>
+            <th>Designation</th>
+            <th>Email</th>
+            <th>Pay Period</th>
+            <th>Net Pay</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <!-- Rows injected via JS -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+
+</html>
