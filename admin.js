@@ -16,28 +16,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // 2. Login Logic
-    loginForm.addEventListener('submit', async (e) => {
+    loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const username = document.getElementById('adminId').value;
+        const username = document.getElementById('adminId').value.trim();
         const password = document.getElementById('adminPassword').value;
-
-        try {
-            const res = await fetch('http://localhost:3000/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            const data = await res.json();
-
-            if (data.success) {
-                localStorage.setItem('adminLoggedIn', 'true');
-                showDashboard();
-            } else {
-                loginError.innerText = data.message;
-                loginError.style.display = 'block';
-            }
-        } catch (err) {
-            loginError.innerText = "Error connecting to server. Is it running?";
+        // Set your demo admin credentials here!
+        if (username === 'admin' && password === 'admin123') {
+            localStorage.setItem('adminLoggedIn', 'true');
+            showDashboard();
+        } else {
+            loginError.innerText = "Invalid Admin ID or Password";
             loginError.style.display = 'block';
         }
     });
@@ -56,48 +44,60 @@ document.addEventListener('DOMContentLoaded', () => {
         loadPayslips();
     }
 
-    // 4. Load & Search Payslips
-    async function loadPayslips(searchQuery = '') {
-        try {
-            const res = await fetch(`http://localhost:3000/api/payslips?search=${encodeURIComponent(searchQuery)}`);
-            const payslips = await res.json();
+    // 4. Load & Search Payslips (from localStorage)
+    function getPayslips() {
+        return JSON.parse(localStorage.getItem('payslips') || '[]');
+    }
 
-            tableBody.innerHTML = '';
+    function savePayslips(payslips) {
+        localStorage.setItem('payslips', JSON.stringify(payslips));
+    }
 
-            if (payslips.length === 0) {
-                tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No employees found.</td></tr>';
-                return;
-            }
+    function loadPayslips(searchQuery = '') {
+        let payslips = getPayslips();
 
-            payslips.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${p.id}</td>
-                    <td><strong>${p.name || '-'}</strong></td>
-                    <td>${p.persNo || '-'}</td>
-                    <td>${p.designation || '-'}</td>
-                    <td>${p.email || '-'}</td>
-                    <td>${p.payPeriodFrom || ''} to ${p.payPeriodTo || ''}</td>
-                    <td>₹${p.netPay || '0.00'}</td>
-                    <td>
-                        <button class="btn btn-sm btn-edit edit-btn" title="Edit" data-id="${p.id}">Edit</button>
-                        <button class="btn btn-sm btn-danger delete-btn" title="Delete" data-id="${p.id}">Delete</button>
-                    </td>
-                `;
-                tableBody.appendChild(tr);
-            });
-
-            // Attach listeners to new buttons
-            document.querySelectorAll('.delete-btn').forEach(btn => {
-                btn.addEventListener('click', deletePayslip);
-            });
-            document.querySelectorAll('.edit-btn').forEach(btn => {
-                btn.addEventListener('click', editPayslip);
-            });
-
-        } catch (err) {
-            console.error("Failed to load payslips", err);
+        // Filter based on search query
+        if (searchQuery && searchQuery.trim().length > 0) {
+            const q = searchQuery.toLowerCase();
+            payslips = payslips.filter(p =>
+                (p.id && p.id.toLowerCase().includes(q)) ||
+                (p.name && p.name.toLowerCase().includes(q)) ||
+                (p.email && p.email.toLowerCase().includes(q))
+            );
         }
+
+        tableBody.innerHTML = '';
+
+        if (payslips.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No employees found.</td></tr>';
+            return;
+        }
+
+        payslips.forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${p.id || ''}</td>
+                <td><strong>${p.name || '-'}</strong></td>
+                <td>${p.persNo || '-'}</td>
+                <td>${p.designation || '-'}</td>
+                <td>${p.email || '-'}</td>
+                <td>${p.payPeriodFrom || ''} to ${p.payPeriodTo || ''}</td>
+                <td>₹${p.netPay || '0.00'}</td>
+                <td>
+                    <button class="btn btn-sm btn-edit edit-btn" title="Edit" data-id="${p.id}">Edit</button>
+                    <button class="btn btn-sm btn-danger delete-btn" title="Delete" data-id="${p.id}">Delete</button>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        });
+
+        // Attach listeners to new buttons
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', deletePayslip);
+        });
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', editPayslip);
+        });
     }
 
     searchBtn.addEventListener('click', () => {
@@ -109,27 +109,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 5. Delete Logic
-    async function deletePayslip(e) {
+    function deletePayslip(e) {
         const btn = e.currentTarget || e.target;
         const id = btn.getAttribute('data-id');
         const tr = btn.closest('tr');
         if (confirm(`Are you sure you want to delete payslip record ID ${id}?`)) {
-            try {
-                const res = await fetch(`http://localhost:3000/api/payslips/${id}`, { method: 'DELETE' });
-                const data = await res.json();
-                if (data.success) {
-                    if (tr) tr.remove();
-                } else {
-                    alert("Failed to delete record.");
-                }
-            } catch (err) {
-                console.error("Delete error", err);
-                alert("Error connecting to server.");
-            }
+            let payslips = getPayslips();
+            payslips = payslips.filter(p => p.id !== id);
+            savePayslips(payslips);
+            if (tr) tr.remove();
         }
     }
 
-    // 6. Edit Logic (Redirect to generator with data or just alert for now)
+    // 6. Edit Logic (redirect to payslip.html with ?edit=id)
     function editPayslip(e) {
         const btn = e.currentTarget || e.target;
         const id = btn.getAttribute('data-id');
