@@ -240,46 +240,63 @@ document.addEventListener('DOMContentLoaded', () => {
         saveBtn.innerText = 'Update';
         // Fetch existing data
         fetch(`http://localhost:3000/api/payslips/${editId}`)
-            .then(res => res.json())
+            .then(res => {
+                if (!res.ok) throw new Error("Server responded with error status");
+                return res.json();
+            })
             .then(data => {
                 if (data.success && data.data) {
-                    const p = data.data;
-                    document.getElementById('empName').value = p.name || '';
-                    document.getElementById('persNo').value = p.persNo || '';
-                    if (document.getElementById('empEmail')) document.getElementById('empEmail').value = p.email || '';
-                    document.getElementById('designation').value = p.designation || '';
-                    if (document.getElementById('department')) document.getElementById('department').value = p.department || '';
-                    document.getElementById('pan').value = p.pan || '';
-                    document.getElementById('doj').value = p.doj || '';
-                    document.getElementById('payPeriodFrom').value = p.payPeriodFrom || '';
-                    document.getElementById('payPeriodTo').value = p.payPeriodTo || '';
-                    document.getElementById('paidDays').value = p.paidDays || '';
-                    document.getElementById('pfNo').value = p.pfNo || '';
-                    document.getElementById('uan').value = p.uan || '';
-                    if (document.getElementById('baseBasicPay')) document.getElementById('baseBasicPay').value = p.basicPay || '';
-                    if (document.getElementById('grossPayCP')) document.getElementById('grossPayCP').value = p.grossPay || '';
-                    document.getElementById('hraCP').value = p.hra || '';
-                    document.getElementById('mealCouponCP').value = p.mealCoupon || '';
-                    if (document.getElementById('travelAllowanceCP')) {
-                        document.getElementById('travelAllowanceCP').value = p.travelAllowance || '';
-                    }
-                    document.getElementById('totalEarningsCP').value = p.totalEarnings || '';
-                    document.getElementById('incomeTaxCP').value = p.incomeTax || '';
-                    document.getElementById('totalTaxCP').value = p.totalTax || '';
-                    document.getElementById('pfCP').value = p.pf || '';
-                    document.getElementById('profTaxCP').value = p.profTax || '';
-                    document.getElementById('medInsCP').value = p.medIns || '';
-                    document.getElementById('sodexoCP').value = p.sodexo || '';
-                    document.getElementById('totalDeductionsCP').value = p.totalDeductions || '';
-                    document.getElementById('bankName').value = p.bankName || '';
-                    document.getElementById('bankAccount').value = p.bankAccount || '';
-                    document.getElementById('netPayFinal').value = p.netPay || '';
-                    
-                    // Trigger calculations
-                    updateCalculations();
+                    populateForm(data.data);
+                } else {
+                    throw new Error("Invalid payload data from server");
                 }
             })
-            .catch(err => console.error("Error fetching payslip", err));
+            .catch(err => {
+                // Fallback: load from localStorage
+                const payslips = JSON.parse(localStorage.getItem('payslips') || '[]');
+                const p = payslips.find(item => String(item.id) === String(editId));
+                if (p) {
+                    populateForm(p);
+                } else {
+                    alert("Error: Payslip record not found locally.");
+                }
+            });
+    }
+
+    function populateForm(p) {
+        document.getElementById('empName').value = p.name || '';
+        document.getElementById('persNo').value = p.persNo || '';
+        if (document.getElementById('empEmail')) document.getElementById('empEmail').value = p.email || '';
+        document.getElementById('designation').value = p.designation || '';
+        if (document.getElementById('department')) document.getElementById('department').value = p.department || '';
+        document.getElementById('pan').value = p.pan || '';
+        document.getElementById('doj').value = p.doj || '';
+        document.getElementById('payPeriodFrom').value = p.payPeriodFrom || '';
+        document.getElementById('payPeriodTo').value = p.payPeriodTo || '';
+        document.getElementById('paidDays').value = p.paidDays || '';
+        document.getElementById('pfNo').value = p.pfNo || '';
+        document.getElementById('uan').value = p.uan || '';
+        if (document.getElementById('baseBasicPay')) document.getElementById('baseBasicPay').value = p.basicPay || '';
+        if (document.getElementById('grossPayCP')) document.getElementById('grossPayCP').value = p.grossPay || '';
+        document.getElementById('hraCP').value = p.hra || '';
+        document.getElementById('mealCouponCP').value = p.mealCoupon || '';
+        if (document.getElementById('travelAllowanceCP')) {
+            document.getElementById('travelAllowanceCP').value = p.travelAllowance || '';
+        }
+        document.getElementById('totalEarningsCP').value = p.totalEarnings || '';
+        document.getElementById('incomeTaxCP').value = p.incomeTax || '';
+        document.getElementById('totalTaxCP').value = p.totalTax || '';
+        document.getElementById('pfCP').value = p.pf || '';
+        document.getElementById('profTaxCP').value = p.profTax || '';
+        document.getElementById('medInsCP').value = p.medIns || '';
+        document.getElementById('sodexoCP').value = p.sodexo || '';
+        document.getElementById('totalDeductionsCP').value = p.totalDeductions || '';
+        document.getElementById('bankName').value = p.bankName || '';
+        document.getElementById('bankAccount').value = p.bankAccount || '';
+        document.getElementById('netPayFinal').value = p.netPay || '';
+        
+        // Trigger calculations
+        updateCalculations();
     }
     
     saveBtn.addEventListener('click', async () => {
@@ -342,15 +359,58 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Error: " + data.message);
             }
         } catch (err) {
-            console.error(err);
-            alert("Error connecting to server. Is it running?");
+            // Local fallback saving logic (guarantees data is saved!)
+            let payslips = JSON.parse(localStorage.getItem('payslips') || '[]');
+            if (editId) {
+                // Update existing record in localStorage
+                payslips = payslips.map(p => {
+                    if (String(p.id) === String(editId)) {
+                        return { ...payload, id: editId };
+                    }
+                    return p;
+                });
+                localStorage.setItem('payslips', JSON.stringify(payslips));
+                alert("Payslip updated successfully!");
+                window.location.href = 'index.html';
+            } else {
+                // Generate a new unique ID (sequence of numbers)
+                const newId = payslips.length > 0 ? Math.max(...payslips.map(p => parseInt(p.id) || 0)) + 1 : 1;
+                const newRecord = { ...payload, id: String(newId) };
+                payslips.push(newRecord);
+                localStorage.setItem('payslips', JSON.stringify(payslips));
+                alert("Payslip saved successfully!");
+                document.getElementById('payslipForm').reset();
+                document.getElementById('payslipTitle').innerText = "Payslip Generator";
+            }
         }
     });
+
+    function validateForPrintDownload() {
+        const empName = document.getElementById('empName').value;
+        const baseBasicPay = document.getElementById('baseBasicPay') ? document.getElementById('baseBasicPay').value : '';
+        
+        if (!empName || !baseBasicPay) {
+            alert("Please enter all the details before proceeding.");
+            return false;
+        }
+        return true;
+    }
+
+    const printBtn = document.getElementById('printBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', () => {
+            if (validateForPrintDownload()) {
+                window.print();
+            }
+        });
+    }
 
     // 6. Download PDF Logic
     const downloadBtn = document.getElementById('downloadBtn');
     if (downloadBtn) {
         downloadBtn.addEventListener('click', () => {
+            if (!validateForPrintDownload()) return;
+            
             const element = document.querySelector('.main-container');
             const actionButtons = document.querySelector('.action-buttons');
             
